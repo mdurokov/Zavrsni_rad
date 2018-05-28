@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+	<script src="js/chessboard-0.3.0.js"></script>
+	<script src="js/chessboard-0.3.0.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
+	<script src="js/FileSaver/FileSaver.js"></script>
+	<script src="js/FileReader.js"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  	<link rel="stylesheet" type="text/css" href="css/chessboard-0.3.0.css">
+  	<link rel="stylesheet" type="text/css" href="css/chessboard-0.3.0.min.css">
+
+  	<style>
+  		.rcorners {
+		 	border-style: solid;
+    		border-color: black;
+    		border-width: 1px;
+		    border-radius: 5px;
+		    padding: 20px;
+		    overflow: hidden
+		}
+		span{
+			display: inline-block;
+			font-size: 14px;
+			margin-left:3px;
+		}
+		.moveSpan:hover{
+			background-color: #b5ccf2;
+			cursor: pointer;
+		}
+		.activeMove{
+			background-color: #b5ccf2;
+		}
+		.panel{
+			border-style: solid;
+    		border-color: black;
+    		border-width: 1px;
+		}
+		.row{
+			margin-left: 15px;
+		}
+		.moves{
+			overflow: scroll;
+		}
+		#comment{
+			margin-bottom: 20px;
+		}
+  	</style>
+
+	<title>Aplikacija za analizu šahovske partije</title>
+</head>
+<body>
+	<div id="FENImport" class="row" style="display:none; background-color: #9ba9c1; height:80px">
+		<br>
+		<input type="text" class="form-inline" placeholder="Paste FEN string here" size="90" id="FENInput" style="margin-left:20px">
+		<button type="button" class="btn btn-success" onclick="loadFEN()">Load FEN</button>
+		<button type="button" class="btn btn-danger" onclick="showFENImport()">Close</button>
+	</div>
+	<div id="PGNImport" class="row" style="display:none; background-color: #9ba9c1; height:80px">
+		<br>
+		<input type="text" class="form-inline" placeholder="Paste PGN string here" size="90" id="PGNInput" style="margin-left:20px">
+		<button type="button" class="btn btn-success" onclick="loadPGN()">Load PGN</button>
+		<button type="button" class="btn btn-danger" onclick="showPGNImport()">Close</button>
+	</div>
+	<br>
+	<div class="row">
+	    <div class="col-sm-5">
+	      	<div id="board" style="margin-top: 40px" onmousedown="focusOut()" style="width: 600px"></div>
+			
+	    </div>
+	    <div class="col-sm-7">
+	    	<div class="row">
+		    	
+	    	</div>
+	    	<div class="row">
+				
+				<div class="col-sm-4">
+		    		<h4>Move List: <span style="font-size: 20px" id="status"></span></h4>
+		    	</div>
+		    	<div class="col-sm-8">
+		    		<input type="file" id="file-input" accept=".txt" class="btn btn-primary" style="display:inline-block;"/>
+					<button type="button" class="btn btn-primary" onclick="saveAnalysis()">Save Analysis</button>
+		    	</div>
+			</div>
+			<div class="panel panel-default" style="width: 90%"">
+				<div id="moveList" class="panel-body moves" style="height: 200px"></div>
+			</div>
+			<div id="comment">
+				<div class="row">
+				<h4>Comment:</h4>
+				</div>
+			 	<textarea id="commentBox" rows="1" cols="100" class="rcorners" style="height:60px; width: 90%">
+				</textarea> 
+			</div>
+			<div class="row">
+				<div class="col-sm-9">
+					<h4>FEN:</h4>
+				</div>
+				<div class="col-sm-3">
+					<button id="FENImportBtn" type="button" class="btn btn-primary" onclick="showFENImport()">Import FEN</button>
+				</div>
+			</div>
+			<div class="panel panel-default" style="width: 90%; height: 60px">
+				<div id="fenString" class="panel-body"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-9">
+					<h4>PGN:</h4>
+				</div>
+				<div class="col-sm-3">			
+					<button id="PGNImportBtn" type="button" class="btn btn-primary" onclick="showPGNImport()">Import PGN</button>
+				</div>
+			</div>
+			<div class="panel panel-default" style="width: 90%; height: 140px">
+						<div id="pgnString" class="panel-body"></div>
+					</div>
+	    </div>
+	</div>
+
+</body>
+</html> 
+
+<script>
+
+$("#commentBox").keyup(function(){
+	activeMove[0].comment = $('#commentBox').val()
+	printMoves()
+});
+
+var counter = 0;
+var gameHistory = [];
+var currentVariation = [];
+var activeMove = [];
+
+function appendMove(){
+	var history = game.history({verbose:true});
+	var c = history[history.length-1].color;
+	
+	//console.log(counter)
+	counter++;
+	var move = {
+		id: "move"+counter,
+		san: history[history.length-1].san,
+		color: c,
+		fen: game.fen(),
+		comment: '',
+		children: []
+	}
+	
+
+	// ako nije kliknut ni jedan potez, printaj redom
+	if(activeMove.length == 0){
+		gameHistory.push(move);
+
+	}else{
+		//ako je kliknut neki potez
+		var last = activeMove[1]
+		var ar = activeMove[2]
+		var returnedMove = activeMove[0]
+
+		if(last){
+			// ako je zadnji u varijaciji
+			ar.push(move)
+		}else if(currentVariation.length != 0){
+			// ako nije zadnji, ali current variation nije prazan, dodaj na kraj
+			currentVariation.push(move);
+		}else{
+			// ako ne postoji varijacija nakon što je kliknut potez i odigran novi,
+			// napravi polje za novu varijaciju te označi da je to trenutna varijacija
+			move.parent = activeMove[0].id
+
+			returnedMove.children.push([])
+			returnedMove.children[returnedMove.children.length-1].push(move)
+			currentVariation = returnedMove.children[returnedMove.children.length-1]
+		}
+	}
+
+	activeMove = findById(move.id)
+
+	$("#commentBox").val(activeMove[0].comment)
+
+	showFEN();
+	showPGN();
+	printMoves();
+	//console.log(gameHistory)
+}
+
+// vraca pronadeni potez, zastavicu koja oznacava jel zadnji u polju,
+// polje u kojem je naden potez, indeks poteza u polju
+function findById(id, array=gameHistory){
+	var move;
+
+	iterate(id, array)
+
+	return move
+	
+	function iterate(id, array=gameHistory){
+		for(var i=0; i<array.length; i++){
+			if(array[i].id == id){
+				if(array[i+1]){
+					move =  [array[i], false, array, i];
+				}else{
+					move =  [array[i], true, array, i]
+				}				
+			}
+			else if(array[i].children.length != 0){				
+				for(var j=0; j<array[i].children.length; j++){
+					iterate(id, array[i].children[j])
+				}
+			}
+		}
+	}
+	
+}
+
+
+function printMoves(ar = gameHistory){
+	roundCounter = 1
+	$("#moveList").html("");
+
+	var stringToPrint = "";
+	
+	// print glavne varijacije, ako postoje ostale pozovi printVariation
+	for(var i=0; i<ar.length; i++){
+		if(i%2 == 0){
+			stringToPrint += "<span style='color:red;'>"+roundCounter+".</span>";
+			roundCounter++;
+		}
+		stringToPrint += "<span id='"+ar[i].id+"' style='color:blue;' class='moveSpan' onmouseup='moveClicked(this.id)'>"+ar[i].san+"</span><span style='color:#8c8c8c;'><i>"+ar[i].comment+"</i></span>" 
+
+		if(ar[i].children.length > 0){
+			for(var j=0; j<ar[i].children.length; j++){
+				stringToPrint += printVariation(ar[i].children[j], roundCounter,30)
+			}
+		}
+	}
+
+
+	
+	$("#moveList").append("<div>"+stringToPrint+"</div>")
+
+	if(activeMove != 0){
+		$("#moveSpan").removeClass("activeMove")
+		$("#"+activeMove[0].id).addClass("activeMove")
+	}
+
+
+	function printVariation(ar, roundCounter, leftMargin){
+		var counter = roundCounter
+		var startingPoint = 0;
+
+		var blackToMove = false
+
+		var print = "";
+		
+		// printaj ostatak rekurzivno
+		for(var k=startingPoint; k<ar.length; k++){
+			if(ar[0].color == "b" && k==0){
+				counter = counter-1
+				blackToMove = true;
+				print += "<span style='color:red;'>"+counter+".</span>";
+				print += "<span style='color:blue;' class='moveSpan' >...</span>"
+				print += "<span id='"+ar[0].id+"' style='color:blue;' class='moveSpan' onmouseup='moveClicked(this.id)'>"+ar[0].san+"</span><span style='color:#8c8c8c;'><i>"+ar[0].comment+"</i></span>"
+				counter++;
+				startingPoint = 1;
+
+				if(ar[k].children.length>0){
+					for(var l=0; l<ar[k].children.length; l++){
+						print += printVariation(ar[k].children[l], counter, leftMargin)
+					}
+				}
+			}else{
+				if(k%2 == 0 && !blackToMove){
+					print += "<span style='color:red;'>"+counter+".</span>";
+					counter++
+				}else if(k%2 != 0 && blackToMove){
+					print += "<span style='color:red;'>"+counter+".</span>";
+					counter++
+				}
+				
+				print += "<span id='"+ar[k].id+"' style='color:blue;' class='moveSpan' onmouseup='moveClicked(this.id)'>"+ar[k].san+"</span><span style='color:#8c8c8c;'><i>"+ar[k].comment+"</i></span>" 
+				if(ar[k].children.length>0){
+					for(var l=0; l<ar[k].children.length; l++){
+						print += printVariation(ar[k].children[l], counter, leftMargin)
+					}
+				}
+			}
+			
+			
+		}
+
+
+
+		return "<div style='margin-left:"+leftMargin+"px'>"+print+"</div>";
+	}
+}
+
+function moveClicked(id){
+
+	//console.log(id)
+	activeMove = findById(id, gameHistory)
+	var move = activeMove[0]
+
+
+	$("#commentBox").val(activeMove[0].comment)
+
+	currentVariation = [];
+
+	game.load(move.fen);
+	board.position(move.fen);
+	
+	showFEN();
+	showPGN();
+	updateStatus();
+	printMoves();
+
+
+	return;
+
+}
+
+
+function showFEN(){
+	if(activeMove.length != 0){
+		$("#fenString").html('')
+		$("#fenString").html(activeMove[0].fen)
+	}else{
+		$("#fenString").html(game.fen())
+	}
+	
+}
+
+function showFENImport(){
+	$("#FENImport").toggle()
+}
+
+function loadFEN(){
+
+	var fenString = $("#FENInput").val()
+	fenString = fenString.trim();
+	
+	if(game.validate_fen(fenString).error != "No errors."){
+		alert(game.validate_fen(fenString).error)
+		return;
+	}
+	
+	game.load(fenString);
+	board.position(game.fen());
+	updateStatus();
+	gameHistory = []
+	activeMove = []
+	printMoves()
+	showFEN()
+	//showPGN()
+}
+
+function showPGN(){
+	var pgnArr = []
+
+	iterate(activeMove)
+
+	function iterate(move){
+		var ar = move[2]
+		for(var i=move[3]; i>-1; i--){
+			pgnArr.push(ar[i].san)
+			if(ar[i].parent){
+				iterate(findById(ar[i].parent))
+			}
+		}
+	}
+	
+	//console.log(pgnArr)
+	var pgnString = "";
+	var moveCounter = 1;
+	var tracker = 0;
+	for(var i = pgnArr.length-1; i>-1; i--){
+		if(tracker%2==0){
+			pgnString += moveCounter + ". "
+			moveCounter++
+		}
+
+		pgnString += pgnArr[i] + " "
+
+		tracker++
+	}
+	//console.log(pgnString)
+
+	$("#pgnString").html(pgnString)
+
+}
+
+function showPGNImport(){
+	$("#PGNImport").toggle()
+
+}
+
+function loadPGN(){
+	var PGNString = $("#PGNInput").val()
+	
+	game.load_pgn(PGNString);
+	var h = game.history()
+	game.reset()
+
+	gameHistory = []
+	activeMove = []
+
+	for(var i=0; i<h.length; i++){
+		game.move(h[i])
+		appendMove()
+	}
+
+	board.position(game.fen())
+
+
+}
+
+function saveAnalysis(){
+	var blob = new Blob([JSON.stringify(gameHistory)], {type: "text/plain;charset=utf-8"});
+	saveAs(blob, "analysis_"+new Date().getTime()+".txt");
+}
+
+document.getElementById('file-input')
+  .addEventListener('change', readSingleFile, false);
+
+function readSingleFile(e){
+	var file = e.target.files[0];
+	if (!file) {
+		return;
+	}
+
+	var reader = new FileReader();
+	reader.onload = function(e) {
+		var contents = e.target.result;
+		parseFile(contents);
+	};
+	reader.readAsText(file);
+}
+
+function parseFile(contents){
+	gameHistory = JSON.parse(contents)
+
+
+	game.load(gameHistory[gameHistory.length-1].fen)
+	board.position(game.fen())
+
+	counter=0;
+	updateCounter();
+	console.log(counter)
+	activeMove = findById("move"+counter)
+
+	printMoves()
+	updateStatus()
+
+	showFEN()
+	showPGN()
+
+	function updateCounter(array=gameHistory){
+
+		for(var i=0; i<array.length; i++){
+			counter++;
+			if(array[i].children.length != 0){
+				
+				for(var j=0; j<array[i].children.length; j++){
+					//console.log("searching children")
+					updateCounter(array[i].children[j])
+				}
+			}
+		}
+	}
+}
+
+
+// chess functionality--------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------
+statusEl = $('#status'),
+fenEl = $('#fen'),
+pgnEl = $('#pgn');
+var game = new Chess();
+
+var onDragStart = function(source, piece, position, orientation) {
+	if (game.game_over() === true || (game.turn() === 'w' && piece.search(/^b/) !== -1) || (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+		return false;
+	}
+};
+
+var onDrop = function(source, target) {
+	// see if the move is legal
+	var move = game.move({
+		from: source,
+		to: target,
+		promotion: 'q'
+	});
+
+	// illegal move
+	if (move === null) return 'snapback';
+
+	updateStatus();
+};
+
+// update the board position after the piece snap 
+// for castling, en passant, pawn promotion
+var onSnapEnd = function() {
+	board.position(game.fen());
+
+	appendMove();
+
+	//console.log(gameHistory)
+};
+
+var updateStatus = function() {
+	var status = '';
+
+	var moveColor = 'White';
+	if (game.turn() === 'b') {
+		moveColor = 'Black';
+	}
+
+	// checkmate?
+	if (game.in_checkmate() === true) {
+		status = 'Game over, ' + moveColor + ' is in checkmate.';
+	}
+
+	// draw?
+	else if (game.in_draw() === true) {
+		status = 'Game over, drawn position';
+	}
+
+	// game still on
+	else {
+		status = moveColor + ' to move';
+
+		// check?
+		if (game.in_check() === true) {
+			status += ', ' + moveColor + ' is in check';
+		}
+	}
+
+	statusEl.html(status);
+	fenEl.html(game.fen());
+	pgnEl.html(game.pgn());
+};
+
+var cfg = {
+	draggable: true,
+	position: 'start',
+	onDragStart: onDragStart,
+	onDrop: onDrop,
+	onSnapEnd: onSnapEnd
+};
+
+var board = ChessBoard('board', cfg);
+updateStatus();
+</script>
